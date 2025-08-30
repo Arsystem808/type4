@@ -97,8 +97,7 @@ if go:
             import io
             buf = io.BytesIO()
             fig.savefig(buf, format='png', dpi=200, bbox_inches='tight')
-            st.download_button('Скачать PNG', data=buf.getvalue(), file_name=f'gauge_{sig.ticker}_{sig.horizon}.png', mime='image/png')
-
+    
         if dev_mode:
             st.markdown("#### JSON")
             st.code(json.dumps(sig.as_dict(), default=str, ensure_ascii=False, indent=2), language="json")
