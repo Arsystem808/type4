@@ -12,6 +12,9 @@ from capintel.signal_engine import build_signal
 from capintel.backtest import toy_backtest
 from capintel.providers.polygon_client import get_last_price, PolygonError
 from capintel.visuals import render_sentiment_gauge
+from streamlit.components.v1 import html as st_html
+from capintel.visuals_svg import render_gauge_svg
+
 
 st.set_page_config(page_title="CapIntel — Signals", page_icon="📈", layout="wide")
 st.title("📈 CapIntel — Идеи для Crypto & Equities (MVP)")
