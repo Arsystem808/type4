@@ -119,8 +119,8 @@ if go:
             score = -min(2.0, max(0.0, (sig.confidence - 0.5) / 0.4 * 2.0))
 
         if show_gauge:
-            fig = render_sentiment_gauge(score)  # внутри уже тёмная тема, градиент и сглаживание
-            st.pyplot(fig, use_container_width=True)
+    svg = render_gauge_svg(score, width=720)   # можешь поставить 800/900 — будет так же чётко
+    st_html(svg, height=380)
 
         if dev_mode:
             st.markdown("#### JSON")
