@@ -13,8 +13,8 @@ def _arc_path(cx, cy, r, start_deg, end_deg):
 
 def render_gauge_svg(
     score: float,
-    prev_score: float | None = None,
-    max_width: int = 660,            # максимум; внутри width:100%
+    prev_score: float = None,
+    max_width: int = 660,            # максимум; в контейнере будет width:100%
     dark_bg: str = "#0E1117",
     animate: bool = True,
     duration_ms: int = 900,
@@ -27,10 +27,10 @@ def render_gauge_svg(
     else:
         prev_score = max(-2.0, min(2.0, float(prev_score)))
 
-    # Геометрия: дугу чуть опускаем, чтобы сверху было место под заголовок
+    # Геометрия: больше воздуха сверху, дугу чуть ниже
     W = max_width
     H = int(W * 0.60)
-    cx, cy, R = W/2, H*0.83, W*0.42
+    cx, cy, R = W/2, H*0.84, W*0.42
 
     def to_angle(s: float) -> float:
         return -180 + 180 * (s + 2.0) / 4.0
@@ -45,28 +45,28 @@ def render_gauge_svg(
     elif score < -1.0:status = "Активно продавать"
     elif score < -0.15:status = "Продавать"
 
-    # Засечки и числа — выносим чуть дальше от дуги
-    ticks = [(-180, "−2"), (-135, "−1"), (-90, "0"), (-45, "+1"), (0, "+2")]
+    # Засечки и числа — БЕЗ метки «0», чтобы не пересекаться с заголовком
+    ticks = [(-180, "−2"), (-135, "−1"), (-45, "+1"), (0, "+2")]
     tick_lines, tick_texts = [], []
-    tick_r_in, tick_r_out, tick_r_txt = R - 10, R + 4, R + 36
+    tick_r_in, tick_r_out, tick_r_txt = R - 10, R + 4, R + 42  # числа дальше от дуги
 
     for a, lab in ticks:
         ax1, ay1 = cx + tick_r_in * math.cos(math.radians(a)), cy + tick_r_in * math.sin(math.radians(a))
         ax2, ay2 = cx + tick_r_out* math.cos(math.radians(a)), cy + tick_r_out* math.sin(math.radians(a))
         tx,  ty  = cx + tick_r_txt* math.cos(math.radians(a)), cy + tick_r_txt* math.sin(math.radians(a))
         tick_lines.append(
-            f'<line x1="{ax1:.1f}" y1="{ay1:.1f}" x2="{ax2:.1f}" y2="{ay2:.1f}" stroke="#FFFFFF" stroke-width="2" />'
+            f'<line x1="{ax1:.1f}" y1="{ay1:.1f}" x2="{ax2:.1f}" y2="{ay2:.1f}" stroke="#FFFFFF" stroke-opacity="0.9" stroke-width="1.6" />'
         )
         tick_texts.append(
             f'<text x="{tx:.1f}" y="{ty:.1f}" text-anchor="middle" dominant-baseline="middle" class="t tick halo">{lab}</text>'
         )
 
     # Размеры шрифтов
-    fs_title  = int(W * 0.050)
-    fs_status = int(W * 0.038)
-    fs_tick   = int(W * 0.032)
+    fs_title  = int(W * 0.050)   # заголовок
+    fs_status = int(W * 0.038)   # статус
+    fs_tick   = int(W * 0.030)   # цифры
 
-    # Градиент и лёгкое «ореол»-свечение для читаемости текста
+    # Градиент + halo (ореол) для читаемости текста
     svg_defs = f"""
     <defs>
       <linearGradient id="grad" x1="0%" y1="100%" x2="100%" y2="100%">
@@ -76,7 +76,7 @@ def render_gauge_svg(
         <stop offset="100%" stop-color="{STOPS[3]}"/>
       </linearGradient>
       <filter id="halo" x="-50%" y="-50%" width="200%" height="200%">
-        <feDropShadow dx="0" dy="0" stdDeviation="2.2" flood-color="#000000" flood-opacity="0.55"/>
+        <feDropShadow dx="0" dy="0" stdDeviation="2.6" flood-color="#000000" flood-opacity="0.55"/>
       </filter>
     </defs>
     """
@@ -93,26 +93,27 @@ def render_gauge_svg(
     </g>
     """
 
-    # ВАЖНО: заголовок рисуем ПОСЛЕ дуги и стрелки, чтобы ничего его не перекрывало
-    title_y = H * 0.12
-    status_y = H * 0.93
+    # Координаты текста
+    title_y  = H * 0.12
+    status_y = H * 0.95
 
+    # Адаптивный SVG: width:100%, не обрезается
     return f"""
 <div style="max-width:{W}px;width:100%;margin:0 auto;">
   <svg viewBox="0 0 {W} {H}" width="100%" height="auto" preserveAspectRatio="xMidYMid meet"
        xmlns="http://www.w3.org/2000/svg" style="background:{dark_bg}; border-radius:12px">
     <style>
       .t {{ fill:#FFFFFF; font-family:-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; }}
-      .h1 {{ font-weight:700; font-size:{fs_title}px; }}
+      .h1 {{ font-weight:700; font-size:{fs_title}px; letter-spacing:0.3px; }}
       .h2 {{ font-weight:700; font-size:{fs_status}px; }}
-      .tick {{ opacity:0.95; font-size:{fs_tick}px; }}
+      .tick {{ opacity:0.98; font-size:{fs_tick}px; }}
       .halo {{ filter:url(#halo); }}
     </style>
     {svg_defs}
 
     <!-- Дуга и обводка -->
     <path d="{arc}"     stroke="url(#grad)" stroke-width="{int(W*0.042)}" stroke-linecap="round" fill="none"/>
-    <path d="{outline}" stroke="#FFFFFF"    stroke-opacity="0.9" stroke-width="2" fill="none"/>
+    <path d="{outline}" stroke="#FFFFFF"    stroke-opacity="0.92" stroke-width="2" fill="none"/>
 
     <!-- Засечки и числа -->
     {''.join(tick_lines)}
@@ -121,8 +122,8 @@ def render_gauge_svg(
     <!-- Стрелка -->
     {needle}
 
-    <!-- Заголовок и статус (рисуем последними, поверх всего) -->
-    <text x="{W/2}" y="{title_y}" text-anchor="middle" class="t h1 halo">Общая оценка</text>
+    <!-- Заголовок и статус (поверх всего) -->
+    <text x="{W/2}" y="{title_y}"  text-anchor="middle" class="t h1 halo">Общая оценка</text>
     <text x="{W/2}" y="{status_y}" text-anchor="middle" class="t h2 halo">{status}</text>
   </svg>
 </div>
