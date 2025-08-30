@@ -12,7 +12,7 @@ from streamlit.components.v1 import html as st_html
 from capintel.signal_engine import build_signal
 from capintel.backtest import toy_backtest
 from capintel.providers.polygon_client import get_last_price, PolygonError
-from capintel.visuals_svg import render_gauge_svg  # адаптивный SVG-прибор
+from capintel.visuals_svg import render_gauge_svg  # SVG-прибор (адаптивный)
 
 # ------------ UI ------------
 st.set_page_config(page_title="CapIntel — Signals", page_icon="📈", layout="wide")
@@ -121,15 +121,23 @@ if go:
 
         if show_gauge:
             prev = st.session_state.get("prev_score")
-            MAX_W = 660  # «потолок» ширины; внутри SVG рендерится на 100% ширины колонки
+
+            # ---- Настройки размера прибора ----
+            MAX_W   = 660   # «потолок» ширины SVG (контейнер впишет в колонку)
+            SCALE   = 0.85  # общий масштаб прибора (0.70–1.00)
+            F_SCALE = 0.88  # масштаб шрифтов (0.70–1.10)
+
             svg = render_gauge_svg(
                 score,
                 prev_score=prev,
                 max_width=MAX_W,
+                scale=SCALE,
+                font_scale=F_SCALE,
                 animate=True,
                 duration_ms=900,
             )
-            st_html(svg, height=int(MAX_W * 0.62))  # запас по высоте, чтобы ничего не обрезалось
+            # Высота iframe под наш аспект ~0.60 + небольшой запас
+            st_html(svg, height=int(MAX_W * SCALE * 0.60 * 1.02))
             st.session_state["prev_score"] = score
 
         if dev_mode:
@@ -147,5 +155,3 @@ if go:
 
 else:
     st.markdown("> Выбери параметры слева и нажми **Сгенерировать сигнал**.")
-
-   
