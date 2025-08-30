@@ -1,71 +1,61 @@
-
 import numpy as np
+import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.patches import Wedge
+from matplotlib import patheffects
 
-COLORS = ["#FFA500", "#FFFACD", "#40E0D0", "#7CFC00"]  # orange, light yellow, turquoise, lime green
-BOUNDS_DEG = [(-180, -135), (-135, -90), (-90, -45), (-45, 0)]
+# Цветовые опорные точки (слева→право): оранжевый → светло-жёлтый → бирюзовый → салатовый
+STOPS = ["#FFA500", "#FFFACD", "#40E0D0", "#7CFC00"]
+BOUNDS_DEG = np.linspace(-180, 0, 401)  # 400 тонких секторов для гладкого градиента
 
-def _zone_index(score: float) -> int:
-    if score < -1: return 0
-    if score < 0:  return 1
-    if score < 1:  return 2
-    return 3
+def _interp_color(t: float):
+    """Линейная интерполяция цветов между опорными остановками."""
+    t = np.clip(t, 0.0, 1.0)
+    j = min(2, int(t * 3))
+    f = t * 3 - j
+    c0 = np.array(matplotlib.colors.to_rgb(STOPS[j]))
+    c1 = np.array(matplotlib.colors.to_rgb(STOPS[j + 1]))
+    c = (1 - f) * c0 + f * c1
+    return c
 
-def render_sentiment_gauge(score: float, sell: int = 0, neutral: int = 0, buy: int = 0, show_numbers: bool = True):
-    """
-    Полукруглый индикатор [-2..+2] в строгом стиле.
-    — Чистая дуга без лишнего текста
-    — Тёмный фон под Streamlit Dark
-    — Акцентная подсветка активной зоны
-    """
-    score = max(-2.0, min(2.0, float(score)))
+def render_sentiment_gauge(score: float, theme_bg: str = "#0E1117"):
+    """Полукруг [-2..+2], тёмная тема, градиент, сглаженные края, минимум текста."""
+    score = float(np.clip(score, -2.0, 2.0))
 
-    # Геометрия
-    theta = np.linspace(-np.pi, 0, 256)
-    x, y = np.cos(theta), np.sin(theta)
+    fig, ax = plt.subplots(figsize=(7.2, 4.0), dpi=300)  # Retina-чётко
+    fig.patch.set_facecolor(theme_bg)
+    ax.set_facecolor(theme_bg)
 
-    fig, ax = plt.subplots(figsize=(6.8, 3.6), dpi=200)
-    # Под цвет темной темы Streamlit
-    fig.patch.set_facecolor("#0E1117")
-    ax.set_facecolor("#0E1117")
+    # Градиентная дуга
+    for i in range(len(BOUNDS_DEG) - 1):
+        t = i / (len(BOUNDS_DEG) - 2)
+        color = _interp_color(t)
+        ax.add_patch(Wedge((0, 0), 1.0, BOUNDS_DEG[i], BOUNDS_DEG[i + 1], width=0.18,
+                           facecolor=color, edgecolor="none"))
 
-    # Сегменты дуги
-    for (a0, a1), c in zip(BOUNDS_DEG, COLORS):
-        ax.add_patch(Wedge((0, 0), 1.0, a0, a1, width=0.16, facecolor=c, edgecolor="none", alpha=0.95))
-
-    # Активная зона (полупрозрачная «светящаяся» подложка)
-    zi = _zone_index(score)
-    a0, a1 = BOUNDS_DEG[zi]
-    ax.add_patch(Wedge((0, 0), 1.02, a0, a1, width=0.20, facecolor=COLORS[zi], alpha=0.25, edgecolor="none"))
-
-    # Внешняя обводка
-    ax.plot(x, y, color="white", linewidth=2.0, solid_capstyle="round", alpha=0.9)
-
-    # Засечки и числовая шкала
-    ticks = np.linspace(-np.pi, 0, 5)  # -2, -1, 0, +1, +2
-    labels = ["-2", "-1", "0", "+1", "+2"]
-    for t in ticks:
-        ax.plot([0.90*np.cos(t), 1.0*np.cos(t)], [0.90*np.sin(t), 1.0*np.sin(t)], color="white", linewidth=2, alpha=0.9)
-    if show_numbers:
-        for t, lab in zip(ticks, labels):
-            ax.text(1.08*np.cos(t), 1.08*np.sin(t), lab, color="white", ha="center", va="center", fontsize=10)
+    # Внешняя белая обводка
+    theta = np.linspace(-np.pi, 0, 512)
+    ax.plot(np.cos(theta), np.sin(theta), color="white", lw=2.2, alpha=0.95)
 
     # Стрелка
     angle = (score + 2.0) / 4.0 * np.pi - np.pi
-    ax.plot([0, 0.84*np.cos(angle)], [0, 0.84*np.sin(angle)], color="white", linewidth=4.5, solid_capstyle="round")
-    ax.scatter([0], [0], s=28, c="white")
+    line, = ax.plot([0, 0.86 * np.cos(angle)], [0, 0.86 * np.sin(angle)],
+                    color="white", lw=5, solid_capstyle="round", zorder=5)
+    line.set_path_effects([patheffects.Stroke(linewidth=7, foreground="#000000", alpha=0.25),
+                           patheffects.Normal()])
+    ax.scatter([0], [0], s=30, c="white", zorder=6, edgecolors="#000000", linewidths=0.3)
 
-    # Заголовок и метка
-    ax.text(0, 1.12, "Общая оценка", color="white", ha="center", va="bottom", fontsize=14, weight="bold")
+    # Подписи (минимум)
+    ax.text(0, 1.07, "Общая оценка", ha="center", va="bottom", color="white",
+            fontsize=14, weight="bold")
     label = "Нейтрально"
-    if score > 1.0: label = "Активно покупать"
-    elif score > 0.15: label = "Покупать"
-    elif score < -1.0: label = "Активно продавать"
-    elif score < -0.15: label = "Продавать"
-    ax.text(0, -0.22, label, color="white", ha="center", va="center", fontsize=12, weight="bold")
+    if score > 1.0:   label = "Активно покупать"
+    elif score > 0.15:label = "Покупать"
+    elif score < -1.0:label = "Активно продавать"
+    elif score < -0.15:label = "Продавать"
+    ax.text(0, -0.21, label, ha="center", va="center", color="white",
+            fontsize=12, weight="bold")
 
-    # Итог
     ax.set_aspect("equal")
     ax.axis("off")
     fig.tight_layout()
