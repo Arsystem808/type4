@@ -16,6 +16,11 @@ st.set_page_config(page_title="CapIntel — Signals", page_icon="📈", layout="
 st.title("📈 CapIntel — Идеи для Crypto & Equities (MVP)")
 st.caption("Формат: BUY / SHORT / CLOSE / WAIT + уровни входа/целей/стопа, confidence и сценарии.")
 
+go = False
+dev_mode = False
+show_gauge = True
+
+
 with st.sidebar:
     st.header("Параметры")
     dev_mode = st.toggle("Режим разработчика", value=False, help="Показать JSON и отладочные блоки")
@@ -112,3 +117,5 @@ if go:
 
 else:
     st.markdown("> Выбери параметры слева и нажми **Сгенерировать сигнал**.")
+
+
