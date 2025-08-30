@@ -13,8 +13,8 @@ def _arc_path(cx, cy, r, start_deg, end_deg):
 
 def render_gauge_svg(
     score: float,
-    prev_score: float = None,
-    max_width: int = 660,            # максимум; в контейнере будет width:100%
+    prev_score: float | None = None,
+    max_width: int = 660,          # максимум; контейнер сам стянет до 100%
     dark_bg: str = "#0E1117",
     animate: bool = True,
     duration_ms: int = 900,
@@ -27,10 +27,10 @@ def render_gauge_svg(
     else:
         prev_score = max(-2.0, min(2.0, float(prev_score)))
 
-    # Геометрия: больше воздуха сверху, дугу чуть ниже
+    # Геометрия: дугу опускаем, сверху даём воздуха под заголовок и «0»
     W = max_width
     H = int(W * 0.60)
-    cx, cy, R = W/2, H*0.84, W*0.42
+    cx, cy, R = W/2, H*0.87, W*0.42   # <-- cy подняли до 0.87 (дуга ниже)
 
     def to_angle(s: float) -> float:
         return -180 + 180 * (s + 2.0) / 4.0
@@ -45,10 +45,10 @@ def render_gauge_svg(
     elif score < -1.0:status = "Активно продавать"
     elif score < -0.15:status = "Продавать"
 
-    # Засечки и числа — БЕЗ метки «0», чтобы не пересекаться с заголовком
-    ticks = [(-180, "−2"), (-135, "−1"), (-45, "+1"), (0, "+2")]
+    # Засечки и числа — ВЕРНУЛИ метку «0» и вынесли цифры дальше от дуги
+    ticks = [(-180, "−2"), (-135, "−1"), (-90, "0"), (-45, "+1"), (0, "+2")]
     tick_lines, tick_texts = [], []
-    tick_r_in, tick_r_out, tick_r_txt = R - 10, R + 4, R + 42  # числа дальше от дуги
+    tick_r_in, tick_r_out, tick_r_txt = R - 10, R + 4, R + 42  # цифры дальше ⇒ лучше читаемость
 
     for a, lab in ticks:
         ax1, ay1 = cx + tick_r_in * math.cos(math.radians(a)), cy + tick_r_in * math.sin(math.radians(a))
@@ -62,11 +62,11 @@ def render_gauge_svg(
         )
 
     # Размеры шрифтов
-    fs_title  = int(W * 0.050)   # заголовок
-    fs_status = int(W * 0.038)   # статус
-    fs_tick   = int(W * 0.030)   # цифры
+    fs_title  = int(W * 0.050)
+    fs_status = int(W * 0.038)
+    fs_tick   = int(W * 0.030)
 
-    # Градиент + halo (ореол) для читаемости текста
+    # Градиент + halo (ореол) для текста
     svg_defs = f"""
     <defs>
       <linearGradient id="grad" x1="0%" y1="100%" x2="100%" y2="100%">
@@ -93,11 +93,10 @@ def render_gauge_svg(
     </g>
     """
 
-    # Координаты текста
-    title_y  = H * 0.12
+    # Координаты заголовка/статуса: заголовок ВЫШЕ «0»
+    title_y  = H * 0.045   # ~4.5% от верха — выше нулевой метки
     status_y = H * 0.95
 
-    # Адаптивный SVG: width:100%, не обрезается
     return f"""
 <div style="max-width:{W}px;width:100%;margin:0 auto;">
   <svg viewBox="0 0 {W} {H}" width="100%" height="auto" preserveAspectRatio="xMidYMid meet"
