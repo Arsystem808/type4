@@ -59,10 +59,12 @@ if go:
         if sig.action == "BUY":   score = min(2.0, max(0.0, (sig.confidence - 0.5) / 0.4 * 2.0))
         elif sig.action == "SHORT": score = -min(2.0, max(0.0, (sig.confidence - 0.5) / 0.4 * 2.0))
         if show_gauge:
-            prev = st.session_state.get("prev_score")
-            svg = render_gauge_svg(score, prev_score=prev, width=760, animate=True, duration_ms=900)
-            st_html(svg, height=400)
-            st.session_state["prev_score"] = score
+    prev = st.session_state.get("prev_score")
+    MAX_W = 660  # комфортный максимум; SVG сам сожмётся до ширины колонки
+    svg = render_gauge_svg(score, prev_score=prev, max_width=MAX_W, animate=True, duration_ms=900)
+    st_html(svg, height=int(MAX_W * 0.62))  # запас по высоте
+    st.session_state["prev_score"] = score
+
         if dev_mode:
             st.markdown("#### JSON"); st.code(json.dumps(sig.dict(), default=str, ensure_ascii=False, indent=2), language="json")
         st.markdown("#### «Игрушечный» бэктест")
